@@ -15,8 +15,9 @@
 
 %%
 \title{Title}
-\author{Name - ID}
-\author{Name - ID}
+\author{Tal Ben Tov - 208634766}
+\author{Omer Talmi - 318900883}
+\author{Lia Soffer - ID}
 
 \date{}
 
@@ -29,42 +30,36 @@ TL;DR of this project - one paragraph
 
 \section{Introduction}
 
-Graph Neural Networks (GNNs) have become a key paradigm for modeling relational data across numerous applications, including social network analysis, chemical graph prediction, and recommendation systems \cite{Gilmer2017}. Among the most widely studied GNN variants are Message Passing Neural Networks (MPNNs), which aggregate information from node neighbors through iterative message-passing steps. MPNNs have been shown to excel at capturing local graph structures, making them well-suited for tasks such as molecular property prediction and community detection in social networks \cite{Gilmer2017}. However, MPNNs struggle to capture long-range dependencies due to over-squashing \cite{Alon2021} and often suffer from high locality bias due to over-smoothing \cite{Oono2020}, limiting their performance on tasks requiring global information flow \cite{Dwivedi2020}.
+Graph Neural Networks (GNNs) have become a key paradigm for modeling relational data across numerous applications, including social network analysis, chemical graph prediction, and recommendation systems \cite{gilmer2017neural}. Among the most widely studied GNN variants are \textbf{Message Passing Neural Networks (MPNNs)}, which aggregate information from node neighbors through iterative message-passing steps. MPNNs have been shown to excel at capturing local graph structures, making them well-suited for tasks such as molecular property prediction and community detection in social networks \cite{gilmer2017neural}. However, MPNNs struggle to capture long-range dependencies due to over-squashing \cite{alon2021bottleneck} and often suffer from high locality bias due to over-smoothing \cite{oono2020expressive}, limiting their performance on tasks requiring global information flow \cite{dwivedi2020benchmarking}.
 
-On the other hand, Graph Transformers (GTs) were introduced to address these limitations by incorporating global attention mechanisms. Transformers in the graph domain allow nodes to attend to all other nodes in the graph, making them highly effective at alleviating over-smoothing and over-squashing \cite{Alon2021,Topping2021}. The attention mechanism enables nodes to focus on more distant regions of the graph, alleviating issues of locality and improving the expressiveness of the model \cite{Xu2019,Morris2019}. However, a major drawback of GTs lies in their quadratic computational complexity $\mathcal{O}(N^2)$ for a graph with $N$ nodes and $E$ edges \cite{Vaswani2017}, which can be prohibitive for large-scale graphs commonly encountered in real-world tasks like traffic systems or genomic analysis \cite{Dwivedi2022,Chen2020}.
+On the other hand, \textbf{Graph Transformers (GTs)} were introduced to address these limitations by incorporating global attention mechanisms. Transformers in the graph domain allow nodes to attend to all other nodes in the graph, making them highly effective at alleviating over-smoothing and over-squashing \cite{alon2021bottleneck, topping2021curvature}. The attention mechanism enables nodes to focus on more distant regions of the graph, alleviating issues of locality and improving the expressiveness of the model \cite{xu2019powerful, morris2019weisfeiler}. However, a major drawback of GTs lies in their quadratic computational complexity $\mathcal{O}(N^2)$ for a graph with $N$ nodes and $E$ edges \cite{vaswani2017attention}, which can be prohibitive for large-scale graphs commonly encountered in real-world tasks like traffic systems or genomic analysis \cite{dwivedi2020benchmarking,Chen2020}.
 
-To strike a balance between local processing in GNNs and global attention in GTs, the General, Powerful, and Scalable (GPS) framework was proposed \cite{Rampasek2022}. GPS combines the best of both worlds by applying a message-passing layer to capture local information and a global attention layer to capture long-range dependencies in each layer of the model. This alternating structure allows GPS to efficiently process graphs while maintaining the benefits of both MPNNs and GTs. However, while GPS successfully integrates local and global mechanisms, the fixed alternation between message-passing and global attention layers may not always be optimal for every graph structure, as some graphs may require more attention on local interactions, while others might benefit from global connectivity patterns \cite{Bronstein2021}.
+To strike a balance between local processing in GNNs and global attention in GTs, the \textbf{General, Powerful, and Scalable (GPS) framework} was proposed \cite{Rampasek2022}. GPS combines the best of both worlds by applying a message-passing layer to capture local information and a global attention layer to capture long-range dependencies in each layer of the model. This alternating structure allows GPS to efficiently process graphs while maintaining the benefits of both MPNNs and GTs. However, while GPS successfully integrates local and global mechanisms, the fixed alternation between message-passing and global attention layers may not always be optimal for every graph structure, as some graphs may require more attention on local interactions, while others might benefit from global connectivity patterns \cite{Bronstein2021}.
 
-In this work, we propose a novel approach to dynamically scale between the local message-passing and global attention layers within the GPS architecture. Instead of a fixed alternation between layers, we introduce a scaling mechanism that computes a scalar to weigh the contribution of each layer based on node-level features. This adaptive weighting aims to:
+In this work, we propose a novel approach to dynamically scale between the local message-passing and global attention layers within the \textbf{GPS} architecture. Instead of a fixed alternation between layers, we introduce a scaling mechanism that computes a weighting vector to scale the contribution of each layer based on node-level features. This adaptive weighting aims to:
 
 \begin{itemize}
-    \item Improve the performance of the GPS framework by tailoring the balance between local and global information to the specific characteristics of the graph.
-    \item Understand the conditions under which global attention or message-passing is more effective by analyzing the learned weights across diverse types of graphs. For instance, in certain molecular graphs, local interactions between nearby atoms may dominate, whereas in social networks, the ability to model long-range dependencies could be crucial.
+    \item \textbf{Improve the performance} of the GPS framework by tailoring the balance between local and global information to the specific characteristics of the graph.
+    \item \textbf{Understand the conditions} under which global attention or message-passing is more effective by analyzing the learned weights across diverse types of graphs. For instance, in certain molecular graphs, local interactions between nearby atoms may dominate, whereas in social networks, the ability to model long-range dependencies could be crucial.
 \end{itemize}
 
-By investigating the scaling weights learned for different graphs, we aim to uncover properties of graphs, such as density, connectivity, community structure, and long-range correlations, that influence the relative importance of local versus global mechanisms. This approach offers insights into how MPNN and Transformer components can be optimally combined in a single model to achieve better performance across diverse graph datasets.
+By investigating the scaling weights learned for different graphs, we aim to uncover properties of graphs, such as \textbf{density, connectivity, community structure, and long-range correlations}, that influence the relative importance of local versus global mechanisms. This approach offers insights into how MPNN and Transformer components can be optimally combined in a single model to achieve better performance across diverse graph datasets.
 
 \section{Related Work}
 
-Recent studies have further explored hybrid models that integrate MPNN-based message-passing and Transformer-based global attention. For instance, in molecular property prediction tasks, hybrid models like Graphormer \cite{Ying2021,Shi2022} have shown that combining MPNN and Transformer components leads to superior performance by capturing both local molecular interactions and global structural motifs. Graphormer improves Transformer performance on molecular graphs by introducing a spatial encoding that preserves the inherent structure of graphs while leveraging attention \cite{Vaswani2017,Gilmer2017}.
+Recent studies have further explored hybrid models that integrate MPNN-based message-passing and Transformer-based global attention. For instance, in molecular property prediction tasks, hybrid models like \textbf{Graphormer} \cite{Ying2021,Shi2022} have shown that combining MPNN and Transformer components leads to superior performance by capturing both local molecular interactions and global structural motifs. Graphormer improves Transformer performance on molecular graphs by introducing a spatial encoding that preserves the inherent structure of graphs while leveraging attention \cite{Vaswani2017,Gilmer2017}.
 
-Similarly, SAN (Graph Structure-Aware Transformer) \cite{Kreuzer2021} enhances standard Transformers by incorporating structural information into the attention mechanism, enabling the model to account for graph connectivity while processing global attention. These models demonstrate that combining local and global mechanisms can significantly improve expressiveness and performance in diverse domains, particularly for tasks where long-range dependencies are critical, such as molecular dynamics or large-scale social network analysis \cite{Bacciu2020}.
+Similarly, \textbf{SAN (Graph Structure-Aware Transformer)} \cite{Kreuzer2021} enhances standard Transformers by incorporating structural information into the attention mechanism, enabling the model to account for graph connectivity while processing global attention. These models demonstrate that combining local and global mechanisms can significantly improve expressiveness and performance in diverse domains, particularly for tasks where long-range dependencies are critical, such as molecular dynamics or large-scale social network analysis \cite{Bacciu2020}.
 
-However, challenges remain in such hybrid systems. The use of both MPNN and Transformer layers often introduces model complexity, requiring careful tuning of hyperparameters to balance local and global components \cite{Rampasek2022}. Moreover, certain tasks may disproportionately rely on local or global information, making it difficult to generalize the relative importance of each component across different datasets.
+However, challenges remain in such hybrid systems. The use of both MPNN and Transformer layers often introduces \textbf{model complexity}, requiring careful tuning of hyperparameters to balance local and global components \cite{Rampasek2022}. Moreover, certain tasks may disproportionately rely on local or global information, making it difficult to generalize the relative importance of each component across different datasets.
 
 \section{Method}
 
-In this paper, we propose a novel architecture where each layer consists of two parallel components: a message-passing layer and a global attention layer. Instead of summing them sequentially as in GPS, we compute a weighted sum of their outputs using learned weights throughout the layers. This is done by incorporating a dynamic gating mechanism based on node-level features. This allows the model to decide at each layer the relative importance of message passing versus global attention.
-
-The methodology can be divided into four primary components:
-
-\subsection{Graph Data Representation and Input Encoding}
-
-We adopt a general graph representation where each graph is defined by a set of nodes $V$ and edges $E$, with node features $\mathbf{X}$ and edge attributes $\mathbf{A}$. The input graphs are pre-processed to extract relevant positional and structural encodings following the GPS framework. For local message-passing, we employ standard Graph Convolutional Networks (GCNs) or Graph Isomorphism Networks (GINs), depending on the task.
+In this paper, we propose a novel architecture where each layer consists of two parallel components: a message-passing layer and a global attention layer. Instead of summing them sequentially as in GPS, we compute a weighted sum of their outputs using learned weights throughout the layers. This is done by incorporating a dynamic gating mechanism based on node-level features. This allows the model to decide at each layer the relative importance of message passing versus global attention per node.
 
 \subsection{Dynamic Gating Network Design}
 
-The core innovation of this work lies in the introduction of a dynamic gating network within the GPS layer. As seen in the provided code, the gating network consists of two GCNConv layers, where the first layer reduces the dimensionality of node features, and the second layer outputs two gating scalars for each node. These scalars are passed through a softmax function, ensuring that the combined weights for local and global representations sum to 1:
+The core innovation of this work lies in the introduction of a dynamic gating network within the GPS layer. The gating network consists of two GCNConv layers, where the first layer reduces the dimensionality of node features, and the second layer outputs two gating scalars for each node. These scalars are passed through a softmax function, ensuring that the combined weights for local and global representations sum to 1:
 
 \begin{equation}
 \mathbf{a}_{\text{mag}}, \mathbf{a}_{\text{attn}} = \text{softmax}\left(\text{GCNConv}_2\left(\text{ReLU}\left(\text{GCNConv}_1(\mathbf{h})\right)\right)\right)
@@ -78,13 +73,6 @@ The scalar outputs dynamically adjust the importance of the local and global rep
 
 Here, $\mathbf{h}_{\text{local}}$ represents the node features obtained from local GNN-based message-passing, and $\mathbf{h}_{\text{attn}}$ represents the node features obtained from the global attention mechanism.
 
-\subsection{Local and Global Representations}
-
-The local message-passing model, based on the type of GNN used (e.g., GCN, GIN, or GINEConv), propagates features along graph edges to aggregate local information. The global attention component employs a Transformer or Performer architecture, depending on the dataset's complexity. The combination of these representations allows the model to capture both short-range and long-range dependencies effectively.
-
-\subsection{Optimization and Training}
-
-The overall model is trained end-to-end using backpropagation, with a loss function appropriate for the task at hand (e.g., mean squared error for regression or cross-entropy for classification). Dropout and batch normalization are employed to prevent overfitting, and a learning rate scheduler is used for efficient training.
 
 The method's advantage lies in its flexibility—by dynamically adjusting the contributions of local and global information for each node, the model can adapt to a wide variety of graph structures and tasks. The experimental setup follows the GPS framework, leveraging both small- and large-scale graph benchmarks to demonstrate the scalability and effectiveness of the proposed method.
 
