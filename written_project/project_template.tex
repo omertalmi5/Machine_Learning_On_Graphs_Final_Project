@@ -64,30 +64,30 @@ In this paper, we propose a novel architecture where each layer consists of two 
 
 The core innovation of this work lies in the introduction of a dynamic gating network within the GPS layer. The gating network consists of two GCNConv layers, where the first layer reduces the dimensionality of node features, and the second layer outputs two gating scalars for each node. These scalars are passed through a softmax function.
 
-Thus, the network learns the optimal scaling coefficients for each node based on the graph structure, allowing the GCNConv to balance the contributions of local message passing and global self-attention dynamically.
+Thus, the network learns the optimal scaling coefficients for each node based on the graph structure, allowing the GCNConv to balance the contributions of local message passing and global attention dynamically.
 
 The softmax has multiple roles. 
 
 First, it ensures that the combined weights for the local and global representations sum to 1, thereby providing a normalized weighting scheme. 
 
-More importantly, the softmax mechanism allows the network to dynamically choose between the two modalities (local and global) by assigning a higher weight to the more relevant representation in each context. Unlike a simple averaging or summation of the representations, the softmax emphasizes the better one for the given input by selectively amplifying the scalar corresponding to the dominant modality. This dynamic selection ensures that the GPS layer is context-aware and capable of prioritizing either message passing (local) or global attention, depending on the specific requirements of the node’s environment.
+More importantly, the softmax mechanism allows the network to dynamically choose between the two modalities (local and global) by assigning a higher weight to the more relevant representation in each context. Unlike a simple averaging or summation of the representations, the softmax emphasizes the better one for the given input by selectively amplifying the scalar corresponding to the dominant modality. This dynamic selection ensures that the GPS layer is context-aware and capable of prioritizing either message passing (local) or global attention (global), depending on the specific requirements of the node’s environment.
 
-In mathematical terms, the scalars are computed as:
+In mathematical terms, the scalars of the $\ell$-th layer are computed as:
 
 \begin{equation}
-\mathbf{a}_{\text{mag}}, \mathbf{a}_{\text{attn}} = \text{softmax}\left(\text{GCNConv}_2\left(\text{ReLU}\left(\text{GCNConv}_1(\mathbf{h})\right)\right)\right)
+\mathbf{a}_{\text{mag}}^{\ell}, \mathbf{a}_{\text{attn}}^{\ell} = \text{softmax}\left(\text{GCNConv}_2\left(\text{ReLU}\left(\text{GCNConv}_1(\mathbf{h}^{\ell})\right)\right)\right)
 \end{equation}
 
 
-Here, \( \mathbf{a}_{\text{mag}} \) and \( \mathbf{a}_{\text{attn}} \) are the gating scalars corresponding to the local (message passing) and global (attention) mechanisms, respectively. The softmax ensures these scalars are non-negative and sum to 1, promoting competition between them to emphasize the stronger signal. This formulation allows the GPS layer to leverage the most appropriate mechanism—whether it is graph-based message passing or transformer-style attention—depending on the specific input characteristics and graph topology.
-
-The scalar outputs dynamically adjust the importance of the local and global representations at the node level:
+Here, \( \mathbf{a}_{\text{mag}}^{\ell} \) and \( \mathbf{a}_{\text{attn}}^{\ell} \) are the gating scalars corresponding to the message passing and global attention mechanisms, respectively. h is initially the node features, and then is updated by the rule:
 
 \[
-\mathbf{h} = \mathbf{a}_{\text{mag}} \cdot \mathbf{h}_{\text{local}} + \mathbf{a}_{\text{attn}} \cdot \mathbf{h}_{\text{attn}}
+\mathbf{h}^{\ell+1} = \mathbf{a}_{\text{mag}}^{\ell} \cdot \mathbf{h}_{\text{local}}^{\ell} + \mathbf{a}_{\text{attn}}^{\ell} \cdot \mathbf{h}_{\text{attn}}^{\ell}
 \]
 
-Here, $\mathbf{h}_{\text{local}}$ represents the node features obtained from local GNN-based message-passing, and $\mathbf{h}_{\text{attn}}$ represents the node features obtained from the global attention mechanism.
+Here, $\mathbf{h}_{\text{local}}^{\ell}$ represents the node features obtained from local GNN-based message-passing, and $\mathbf{h}_{\text{attn}}^{\ell}$ represents the node features obtained from the global attention mechanism. The scalar outputs dynamically adjust the importance of the local and global representations at the node level.
+
+The softmax ensures these scalars are non-negative and sum to 1, promoting competition between them to emphasize the stronger signal. This formulation allows the GPS layer to leverage the most appropriate mechanism—whether it is graph-based message passing or transformer-style attention—depending on the specific input characteristics and graph topology.
 
 
 The method's advantage lies in its flexibility—by dynamically adjusting the contributions of local and global information for each node, the model can adapt to a wide variety of graph structures and tasks. The experimental setup follows the GPS framework, leveraging both small- and large-scale graph benchmarks to demonstrate the scalability and effectiveness of the proposed method.
@@ -97,11 +97,45 @@ Describe in detail the experiments you conducted, the datasets you used, the eva
 
 This is also the place to include details on your implementation, such as which libraries you used, and a link to a public GitHub repository with the code (can be an anonymous GitHub) - 1-2 pages.
 
-\paragraph{Datasets}
+\subsection{Datasets}
+We utilize datasets from both the Benchmarking GNNs [15] and the Open Graph Benchmark (OGB) [27]. From Benchmarking GNNs, we employ the ZINC dataset, and from OGB we employ three graph-level datasets: ogbg-molhiv, ogbg-molpcba and ogbg-code2 / ogbg-ppa.
 
-\paragraph{Evaluated Models}
+\begin{table}[htbp]
+\centering
+\caption{Overview of the graph learning dataset \cite{ref1, ref2, ref3, ref4, ref5} used in this study.}
+\begin{tabular}{|l|c|c|c|c|l|l|}
+\hline
+\textbf{Dataset}      & \textbf{\# Graphs} & \textbf{Avg. \# nodes} & \textbf{Avg. \# edges} & \textbf{Directed} & \textbf{Prediction level} & \textbf{Prediction task}         & \textbf{Metric}        \\ \hline
+ZINC                  & 12,000             & 23.2                  & 24.9                  & No                & graph                     & regression                   & Mean Abs. Error  \\ \hline
+ogbg-molhiv           & 41,127             & 25.5                  & 27.5                  & No                & graph                     & binary classific.            & AUROC            \\ \hline
+ogbg-molpcba          & 437,929            & 26.0                  & 28.1                  & No                & graph                     & 128-task classific.          & Avg. Precision   \\ \hline
+ogbg-ppa              & 158,100            & 243.4                 & 2,266.1               & No                & graph                     & 37-task classific.           & Accuracy         \\ \hline
+ogbg-code2            & 452,741            & 125.2                 & 124.2                 & Yes               & graph                     & 5 token sequence classific.  & F1 score         \\ \hline
+\end{tabular}
+\end{table} 
 
-\paragraph{Evaluation Protocol}
+% NEED TO FIX TABLE
+
+
+\paragraph{ZINC Dataset}
+ZINC [15] (MIT License) is a molecular dataset consisting of 12,000 molecular graphs sourced from the ZINC database, which is widely used in chemical compound research. These molecular graphs range in size from 9 to 37 nodes, with each node representing a heavy atom (from 28 possible types) and each edge denoting a bond (3 bond types). The task for this dataset is to predict a molecule’s constrained solubility (logP) using regression. The dataset comes with predefined splits for training (10K), validation (1K), and testing (1K).
+
+\paragraph{ogbg-molhiv and ogbg-molpcba Datasets}
+The ogbg-molhiv and ogbg-molpcba datasets [27] (MIT License), adopted from MoleculeNet, are used for molecular property prediction. These datasets feature a common node (atom) and edge (bond) representation that captures chemophysical properties. The ogbg-molhiv dataset's task is binary classification, predicting whether a molecule inhibits HIV replication. In contrast, ogbg-molpcba is a multi-task binary classification dataset derived from PubChem BioAssay, where the objective is to predict the outcomes of 128 bioassays.
+
+\paragraph{ogbg-ppa Dataset}
+The ogbg-ppa dataset [27] (CC-0 license) consists of protein-protein association (PPA) networks from 1,581 species, categorized into 37 taxonomic groups. In this dataset, nodes represent proteins, while edges represent 7 normalized associations between two proteins. The task involves classifying PPA networks into their respective taxonomic groups.
+
+\paragraph{ogbg-code2 Dataset}
+The ogbg-code2 dataset [27] (MIT License) is composed of abstract syntax trees (ASTs) derived from Python function code. The task is to predict the first five subtokens of a function’s name. Due to the presence of exceptionally large ASTs, ASTs with over 1,000 nodes were truncated to the first 1,000 nodes based on their depth in the tree. This truncation affected only 0.5\% (2,521 graphs) of the dataset.
+
+\paragraph{Dataset Splits and Random Seeds:}
+% need to start a new line
+For all evaluated benchmarks, we adhere to the predefined train, validation, and test splits provided by the datasets. We report the mean performance along with the standard deviation across 10 independent runs, each with a different random seed. This methodology ensures a robust assessment of model performance and, importantly, aligns with the approach used in the original GPS framework, allowing for a fair comparison of results.
+
+\subsection{Evaluated Models}
+
+\subsection{Evaluation Protocol}
 
 \subsection{Results}
 Discuss in detail the results of your experiments. Did you succeed? What is the percentage improvement? Provide cumulative analysis of the results. Discuss potential errors or suggest explanations for why the method failed if it did - 1 page.
