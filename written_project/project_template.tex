@@ -39,7 +39,7 @@ On the other hand, \textbf{Graph Transformers (GTs)} were introduced to address 
 
 To strike a balance between local processing in GNNs and global attention in GTs, the \textbf{General, Powerful, and Scalable (GPS) framework} was proposed \cite{rampášek2023recipegeneralpowerfulscalable}. GPS combines the best of both worlds by applying a message-passing layer to capture local information and a global attention layer to capture long-range dependencies in each layer of the model. This alternating structure allows GPS to efficiently process graphs while maintaining the benefits of both MPNNs and GTs. However, while GPS successfully integrates local and global mechanisms, the fixed alternation between message-passing and global attention layers may not always be optimal for every graph structure, as some graphs may require more attention on local interactions, while others might benefit from global connectivity patterns \cite{Bronstein_2017}.
 
-In this work, we propose a novel approach to dynamically scale between the local message-passing and global attention layers within the \textbf{GPS} architecture. Instead of a fixed alternation between layers, we introduce a scaling mechanism that computes a weighting vector to scale the contribution of each layer based on node-level features. This adaptive weighting aims to:
+In this work, we propose a novel approach to dynamically scale between the local message-passing and global attention layers within the \textbf{GPS} architecture. Instead of a fixed alternation between layers, we introduce a scaling mechanism that computes a gating scalar vector to scale the contribution of each layer based on node-level features. This adaptive weighting aims to:
 
 \begin{itemize}
     \item \textbf{Improve the performance} of the GPS framework by tailoring the balance between local and global information to the specific characteristics of the graph.
@@ -64,7 +64,7 @@ In this paper, we propose a novel architecture where each layer consists of two 
 
 \subsection{Dynamic Gating Network Design}
 
-The core innovation of this work lies in the introduction of a dynamic gating network within the GPS layer. The gating network consists of two GCNConv layers, where the first layer reduces the dimensionality of node features, and the second layer outputs two gating scalars for each node. These scalars are passed through a softmax function.
+The core innovation of this work lies in the introduction of a dynamic gating network within the GPS layer, as shown in Figure ~\ref{fig:wgps_layer}. The gating network consists of two GCNConv layers, where the first layer reduces the dimensionality of node features, and the second layer outputs two gating scalars for each node. These scalars are passed through a softmax function.
 
 Thus, the network learns the optimal scaling coefficients for each node based on the graph structure, allowing the GCNConv to balance the contributions of local message passing and global attention dynamically.
 
@@ -74,20 +74,20 @@ First, it ensures that the combined weights for the local and global representat
 
 More importantly, the softmax mechanism allows the network to dynamically choose between the two modalities (local and global) by assigning a higher weight to the more relevant representation in each context. Unlike a simple averaging or summation of the representations, the softmax emphasizes the better one for the given input by selectively amplifying the scalar corresponding to the dominant modality. This dynamic selection ensures that the GPS layer is context-aware and capable of prioritizing either message passing (local) or global attention (global), depending on the specific requirements of the node’s environment.
 
-In mathematical terms, the scalars of the $\ell$-th layer are computed as:
+In mathematical terms, the scalars are computed as:
 
 \begin{equation}
-\mathbf{a}_{\text{mag}}^{\ell}, \mathbf{a}_{\text{attn}}^{\ell} = \text{softmax}\left(\text{GCNConv}_2\left(\text{ReLU}\left(\text{GCNConv}_1(\mathbf{h}^{\ell})\right)\right)\right)
+\mathbf{a}_{\text{M}}^{\ell+1}, \mathbf{a}_{\text{T}}^{\ell+1} = \text{softmax}\left(\text{GCNConv}_2\left(\text{ReLU}\left(\text{GCNConv}_1(\mathbf{X}^{\ell})\right)\right)\right)
 \end{equation}
 
 
-Here, \( \mathbf{a}_{\text{M}}^{\ell} \) and \( \mathbf{a}_{\text{T}}^{\ell} \) are the gating scalars corresponding to the message passing and global attention mechanisms, respectively. h is initially the node features, and then is updated by the rule:
+Here, \( \mathbf{a}_{\text{M}}^{\ell+1} \) and \( \mathbf{a}_{\text{T}}^{\ell+1} \) are the gating scalar vectors corresponding to the message passing and global attention mechanisms, respectively. X is initially (in layer 1) the node features, and then is updated by the rule:
 
 \[
-\mathbf{h}^{\ell+1} = \mathbf{a}_{\text{mag}}^{\ell} \cdot \mathbf{h}_{\text{local}}^{\ell} + \mathbf{a}_{\text{attn}}^{\ell} \cdot \mathbf{h}_{\text{attn}}^{\ell}
+\mathbf{X}^{\ell+1} = MLP(\mathbf{a}_{\text{M}}^{\ell+1} \cdot \mathbf{X}_{\text{M}}^{\ell+1} + \mathbf{a}_{\text{T}}^{\ell+1} \cdot \mathbf{X}_{\text{T}}^{\ell+1})
 \]
 
-Here, $\mathbf{h}_{\text{local}}^{\ell}$ represents the node features obtained from local GNN-based message-passing, and $\mathbf{h}_{\text{attn}}^{\ell}$ represents the node features obtained from the global attention mechanism. The scalar outputs dynamically adjust the importance of the local and global representations at the node level.
+Here, $\mathbf{X}_{\text{M}}^{\ell+1}$ represents the node features obtained from local GNN-based message-passing, and $\mathbf{X}_{\text{T}}^{\ell+1}$ represents the node features obtained from the global attention mechanism. The scalar outputs dynamically adjust the importance of the local and global representations at the node level.
 
 The softmax ensures these scalars are non-negative and sum to 1, promoting competition between them to emphasize the stronger signal. This formulation allows the GPS layer to leverage the most appropriate mechanism—whether it is graph-based message passing or transformer-style attention—depending on the specific input characteristics and graph topology.
 
@@ -97,15 +97,13 @@ The method's advantage lies in its flexibility—by dynamically adjusting the co
 \begin{figure}[ht]
   \centering
   \includegraphics[width=1\textwidth]{WGPS-layer}
-  \caption{The WGPS layer, with modifications from the original GPS layer showed in orange: In the $({\ell}+1)$-th layer, the dynamic gating network outputs two scalars, $a_T^{{\ell}+1}$ and $a_M^{{\ell}+1}$, which are used to compute a weighted sum between the node features $X_T^{{\ell}+1}$ and $X_M^{{\ell}+1}$, obtained after passing through the Global Attention and MPNN layers, respectively: $a_M^{{\ell}+1} \cdot X_M^{{\ell}+1} + a_T^{{\ell}+1} \cdot X_T^{{\ell}+1}$.
+  \caption{The WGPS layer, with modifications from the original GPS layer showed in orange: the dynamic gating network outputs two scalars, $a_T^{{\ell}+1}$ and $a_M^{{\ell}+1}$, which are used to compute a weighted sum between the node features $X_T^{{\ell}+1}$ and $X_M^{{\ell}+1}$ (obtained after passing through the Global Attention and MPNN layers, respectively): $a_M^{{\ell}+1} \cdot X_M^{{\ell}+1} + a_T^{{\ell}+1} \cdot X_T^{{\ell}+1}$.
 }
   \label{fig:wgps_layer}
 \end{figure}
 
 \section{Experiments and Results}
-Describe in detail the experiments you conducted, the datasets you used, the evaluation metrics, and models or other methods you compared against. Explain how you generated your splits or where you obtained them. Make sure to explain every experiment you show: what is the goal of this experiment? If needed, include running time or memory usage reports.
 
-This is also the place to include details on your implementation, such as which libraries you used, and a link to a public GitHub repository with the code (can be an anonymous GitHub) - 1-2 pages.
 
 \subsection{Datasets}
 We utilize datasets from both the Benchmarking GNNs \cite{dwivedi2022benchmarkinggraphneuralnetworks} and the Open Graph Benchmark (OGB) \cite{hu2021opengraphbenchmarkdatasets}. From Benchmarking GNNs, we employ the ZINC dataset, and from OGB we employ three graph-level datasets: ogbg-molhiv, ogbg-molpcba and ogbg-code2 / ogbg-ppa.
@@ -148,6 +146,56 @@ For all evaluated benchmarks, we adhere to the predefined train, validation, and
 We forked the official GPS repository and modified the \texttt{GPSLayer} class to implement our proposed changes. The complete code for our experiments, along with instructions to reproduce the results, is publicly available at the following GitHub repository: \href{https://github.com/omertalmi5/WeightedGraphGPS}{GitHub Repository}. The specific modifications to the \texttt{GPSLayer} class can be found in this \href{https://github.com/omertalmi5/WeightedGraphGPS/blob/main/graphgps/layer/gps_layer.py}{modified file}.
 
 \subsection{Results}
+
+
+\begin{table}[t]
+    \caption{Test performance on the selected benchmarks. Shown is the mean~±~s.d.~of 10 runs with different random seeds. Highlighted are the top \first{first}, \second{second}, and \third{third} results.}
+    \label{tab:merged_results}
+    \centering
+    \fontsize{8.5pt}{8.5pt}\selectfont
+    \setlength\tabcolsep{5pt} % Adjust column separation
+    \begin{tabular}{lcccc}\toprule
+    \multirow{2}{*}{\textbf{Model}} & \textbf{ZINC} & \textbf{ogbg-molhiv} & \textbf{ogbg-molpcba} & \textbf{ogbg-code2} \\\cmidrule{2-5}
+    & \textbf{MAE $\downarrow$} & \textbf{AUROC $\uparrow$} & \textbf{Avg.~Precision $\uparrow$} & \textbf{F1 score $\uparrow$} \\\midrule
+    GCN \cite{kipf2016semi} & 0.367 ± 0.011 & -- & -- & -- \\
+    GCN+virtual node & -- & 0.7599 ± 0.0119 & 0.2424 ± 0.0034 & 0.1595 ± 0.0018 \\
+    GIN \cite{xu2018how} & 0.526 ± 0.051 & -- & -- & -- \\
+    GIN+virtual node & -- & 0.7707 ± 0.0149 & 0.2703 ± 0.0023 & 0.1581 ± 0.0026 \\
+    GAT \cite{velickovic2018GAT} & 0.384 ± 0.007 & -- & -- & -- \\
+    GatedGCN \cite{bresson2017GatedGCN,dwivedi2020benchmarking} & 0.282 ± 0.015 & -- & -- & -- \\
+    GatedGCN-LSPE \cite{dwivedi2022LPE} & 0.090 ± 0.001 & -- & 0.267 ± 0.002 & -- \\
+    PNA \cite{corso2020principal_pna} & 0.188 ± 0.004 & 0.7905 ± 0.0132 & 0.2838 ± 0.0035 & 0.1570 ± 0.0032 \\
+    DGN \cite{beaini2021directional_dgn} & 0.168 ± 0.003 & \third{0.7970 ± 0.0097} & -- & -- \\
+    GSN \cite{bouritsas2022improving_GSN} & 0.101 ± 0.010 & \second{0.8039 ± 0.0090} & -- & -- \\
+    CIN \cite{bodnar2021weisfeiler_CIN} & \second{0.079 ± 0.006} & \first{0.8094 ± 0.0057} & -- & -- \\
+    CRaWl~\cite{toenshoff2021CRaWl} & 0.085 ± 0.004 & -- & \first{0.2986 ± 0.0025} & -- \\
+    GIN-AK+~\cite{zhao2021stars} & \third{0.080 ± 0.001} & 0.7961 ± 0.0119 & \second{0.2930 ± 0.0044} & -- \\
+    SAN \cite{kreuzer2021rethinking} & 0.139 ± 0.006 & 0.7785 ± 0.2470 & 0.2765 ± 0.0042 & -- \\
+    Graphormer \cite{ying2021graphormer} & 0.122 ± 0.006 & -- & -- & -- \\
+    K-Subgraph SAT \cite{chen2022SAT} & 0.094 ± 0.008 & -- & -- & \first{0.1937 ± 0.0028} \\
+    EGT \cite{hussain2022EGT} & 0.108 ± 0.009 & -- & -- & -- \\
+    DeeperGCN \cite{li2020deepergcn} & -- & 0.7858 ± 0.0117 & 0.2781 ± 0.0038 & -- \\
+    ExpC~\cite{yang2022ExpC} & -- & 0.7799 ± 0.0082 & 0.2342 ± 0.0029 & -- \\
+    GraphTrans (GCN-Virtual) & -- & -- & -- & \third{0.1830 ± 0.0024} \\
+    GPS & \first{0.070 ± 0.004} & 0.7880 ± 0.0101 & \third{0.2907 ± 0.0028} & \second{0.1894 ± 0.0024} \\\\\midrule
+    \textbf{WGPS (ours)} & -- & 0.7823 ± 0.0063 & \third-- & \second-- \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+Our suggested model doesn't succeed to outperform the existing models. Some runs perform outstanding results but the mean isn't better than the exist. 
+
+Our suggested explanation for this is 
+
+The model succeeded to learn the preference for each dataset, it learns that for some datasets, local message-passing dominates, while in others, global attention plays a more critical role. However, one notable observation concerns the **scaling vector output** of the gating network. The values within each scaling vector tend to be quite similar across all items. For instance, typical scaling vectors across runs exhibit values like \( (0.10, 0.11, 0.12, 0.10, \dots) \). 
+
+To provide further statistical insight, we measured the **mean and standard deviation** of each scaling vector across the different datasets on the test splits. The standard deviation values were consistently small, indicating minimal variability across vector components. For the different datasets the mean of the standard deviation are ... . This suggests that, while the model dynamically determines scaling values for each node individually, it exhibits a tendency to apply similar scaling behavior across all nodes in practice. This preference for a consistent scaling pattern across the dataset implies that the model implicitly favors a unified scaling strategy, despite its capability to make node-specific decisions.
+
+
+
+As illustrated in Figure~\ref{fig:scaling_histograms}, the histograms of the mean scaling values for each dataset reveal distinct preferences between the two layers. In \textbf{Dataset 1}, the model shows a clear preference for \textbf{Layer A} over \textbf{Layer B}, as indicated by higher mean values concentrated in the distribution for Layer A. Conversely, \textbf{Dataset 2} reflects the opposite behavior, favoring \textbf{Layer B} with greater intensity. \textbf{Dataset 3} demonstrates a more balanced scaling between the two layers, with both distributions exhibiting comparable mean values. Lastly, \textbf{Dataset 4} slightly favors \textbf{Layer A}, though with less pronounced dominance than in Dataset 1. These distinct preferences suggest that the model adapts its scaling strategy based on dataset-specific characteristics, employing the two layers in varying proportions to align with the underlying data patterns.
+
+
 
 
 
